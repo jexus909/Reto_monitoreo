@@ -1,7 +1,9 @@
 from flask import Flask
 from app.controllers.load_data import load_data  # Llamar al módulo que realiza la carga
 from app.routes.api_routes import api_bp  # Importar rutas de la API
+from app.decorators.auth import cargar_credenciales_firebase  # Importamos la función desde auth.py
 import threading
+import time  # Importamos time para hacer la pausa
 
 app = Flask(__name__)
 
@@ -32,8 +34,20 @@ def start_load_data():
     thread.start()
 
 if __name__ == "__main__":
-    # Iniciar el servidor Flask y la carga de datos
+    # **Cargar las credenciales de Firebase** al iniciar la aplicación
+    if cargar_credenciales_firebase():
+        print("✅ Firebase Admin SDK inicializado correctamente.")
+    else:
+        print("❌ No se pudo inicializar Firebase Admin SDK desde Vault.")
+    
+    # Pausar 30 segundos antes de iniciar la carga de datos
+    print("⏳ Pausando 5 segundos para verificar la carga de Firebase...")
+    time.sleep(5)  # Pausa de 30 segundos
+
+    # Iniciar la carga de datos
     start_load_data()
+    print("📡 Rutas activas en Flask:")
+    #print(app.url_map)
 
     # Ejecutar el servidor de Flask
     app.run(

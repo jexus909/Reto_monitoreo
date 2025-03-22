@@ -1,17 +1,17 @@
-from flask import request
 from flask_restful import Resource
 from app.models.db import get_db_connection
 from psycopg2.extras import RealDictCursor
 from app.controllers.load_data import get_vault_token, get_encryption_key
 from app.utils.security import decode_if_memoryview
+from app.decorators.auth import require_auth
+print("✅ marketing_controller.py cargado correctamente")
+
 
 class MarketingController(Resource):
+    @require_auth(roles=["marketing"])  # Solo permite acceso a rol 'marketing'
     def get(self, user_name):
-        rol = request.headers.get("X-Rol", "").lower()
 
-        if rol != "marketing":
-            return {"message": "Rol no autorizado"}, 403
-
+        #print("📥 [Marketing] Ingreso al endpoint con usuario:", user_name)
         try:
             # 🔐 Obtener clave para desencriptar datos del auto
             vault_token = get_vault_token()
@@ -20,7 +20,6 @@ class MarketingController(Resource):
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-            # Traer datos de usuario, auto y comportamiento
             query = """
                 SELECT
                     u.user_name,
