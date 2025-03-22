@@ -2,20 +2,28 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15
+    build:
+      context: .
+      dockerfile: Dockerfile.ssl
     container_name: mi_postgres
     restart: always
     environment:
-      POSTGRES_USER: default_user  # Será reemplazado por Vault
-      POSTGRES_PASSWORD: default_pass  # Será reemplazado por Vault
+      POSTGRES_USER: default_user
+      POSTGRES_PASSWORD: default_pass
       POSTGRES_DB: mi_base_datos
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    depends_on:
-      - vault
+    command:
+      - "postgres"
+      - "-c"
+      - "ssl=on"
+      - "-c"
+      - "ssl_cert_file=/var/lib/postgresql/server.crt"
+      - "-c"
+      - "ssl_key_file=/var/lib/postgresql/server.key"
 
   vault:
     image: hashicorp/vault:latest
@@ -24,8 +32,8 @@ services:
     cap_add:
       - IPC_LOCK
     environment:
-      VAULT_DEV_ROOT_TOKEN_ID: "root"
-      VAULT_ADDR: "http://0.0.0.0:8200"
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_ADDR: http://0.0.0.0:8200
     ports:
       - "8200:8200"
     volumes:

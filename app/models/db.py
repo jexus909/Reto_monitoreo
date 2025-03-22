@@ -60,6 +60,7 @@ def get_db_connection():
         user=postgres_user,
         password=postgres_password,
         host=POSTGRES_HOST,
-        port=POSTGRES_PORT
+        port=POSTGRES_PORT,
+        sslmode='require'
     )
     return conn

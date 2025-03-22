@@ -1,0 +1,7 @@
+FROM postgres:15
+
+COPY certs_pgsql/server.crt /var/lib/postgresql/server.crt
+COPY certs_pgsql/server.key /var/lib/postgresql/server.key
+
+RUN chown postgres:postgres /var/lib/postgresql/server.* && \
+    chmod 600 /var/lib/postgresql/server.key

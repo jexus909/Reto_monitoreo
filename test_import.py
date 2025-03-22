@@ -22,9 +22,10 @@ encryption_key = "ClaveSegura12345"
 conn = psycopg2.connect(
     dbname="mi_base_datos",
     user="default_user",
-    password="0X7b9Nd^dJNoCpYM",
+    password=")wCnkEajB8w5!T7t",
     host="localhost",
-    port="5432"
+    port="5432",
+    sslmode="require"
 )
 cursor = conn.cursor()
 
