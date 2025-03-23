@@ -4,10 +4,14 @@ from psycopg2.extras import RealDictCursor
 from app.controllers.load_data import get_vault_token, get_encryption_key
 from app.utils.security import decode_if_memoryview
 from app.decorators.auth import require_auth
+import os
+from flasgger import swag_from
 print("✅ marketing_controller.py cargado correctamente")
 
 
 class MarketingController(Resource):
+    @swag_from(os.path.join(os.path.dirname(__file__), '../../swagger_docs/marketing_controller.yml'))
+    #@swag_from('swagger_docs/marketing_controller.yml')
     @require_auth(roles=["marketing"])  # Solo permite acceso al rol 'marketing'
     def get(self, user_name):
 

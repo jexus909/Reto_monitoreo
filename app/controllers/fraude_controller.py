@@ -4,8 +4,12 @@ from psycopg2.extras import RealDictCursor
 from app.controllers.load_data import get_vault_token, get_encryption_key
 from app.utils.security import enmascarar_tarjeta, enmascarar_cuenta, decode_if_memoryview
 from app.decorators.auth import require_auth
+import os
+from flasgger import swag_from
 
 class FraudeController(Resource):
+    @swag_from(os.path.join(os.path.dirname(__file__), '../../swagger_docs/fraude_controller.yml'))
+    #@swag_from('swagger_docs/fraude_controller.yml')
     @require_auth(roles=["fraude"])  # Solo permite acceso al rol 'fraude'
     def get(self, user_name):
         print(f"📥 [Fraude] Ingreso al endpoint con usuario: {user_name}")

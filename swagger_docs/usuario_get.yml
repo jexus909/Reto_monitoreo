@@ -1,0 +1,25 @@
+tags:
+  - Usuarios
+summary: Obtener información básica del usuario
+description: Retorna datos del usuario como dirección, IP, color favorito y avatar.
+parameters:
+  - name: user_name
+    in: path
+    required: true
+    type: string
+    description: Nombre del usuario a consultar
+responses:
+  200:
+    description: Usuario encontrado exitosamente
+    content:
+      application/json:
+        example:
+          user_name: Joyce_Considine
+          direccion: Calle falsa 123
+          ip: 192.168.1.1
+          color_favorito: rojo
+          avatar: "https://cdn.example.com/avatar.jpg"
+  404:
+    description: Usuario no encontrado
+  500:
+    description: Error interno del servidor

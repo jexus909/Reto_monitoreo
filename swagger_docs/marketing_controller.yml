@@ -1,0 +1,32 @@
+tags:
+  - Marketing
+summary: Obtener información de marketing del usuario
+description: Requiere token JWT válido en el encabezado Authorization.
+security:
+  - Bearer: []
+parameters:
+  - name: user_name
+    in: path
+    required: true
+    type: string
+    description: Nombre del usuario
+responses:
+  200:
+    description: Datos de marketing obtenidos exitosamente
+    content:
+      application/json:
+        example:
+          user_name: Joyce_Considine
+          color_favorito: rojo
+          avatar: "https://cdn.example.com/avatar.jpg"
+          cantidad_compras_realizadas: 15
+          auto: Ford
+          auto_modelo: Focus
+          auto_tipo: Sedan
+          auto_color: Azul
+  404:
+    description: Usuario no encontrado o sin datos de auto
+  401:
+    description: Token inválido o ausente
+  500:
+    description: Error interno del servidor

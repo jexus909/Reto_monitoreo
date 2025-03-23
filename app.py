@@ -1,4 +1,5 @@
 from flask import Flask
+from flasgger import Swagger
 from app.controllers.load_data import load_data  # Llamar al módulo que realiza la carga
 from app.routes.api_routes import api_bp  # Importar rutas de la API
 from app.decorators.auth import cargar_credenciales_firebase  # Importamos la función desde auth.py
@@ -11,6 +12,31 @@ app = Flask(__name__)
 
 # Registrar las rutas de la API
 app.register_blueprint(api_bp, url_prefix='/api')
+# Configuración básica de Swagger
+swagger = Swagger(app, template={
+    "swagger": "2.0",
+    "info": {
+        "title": "API Monitoreo",
+        "version": "1.0",
+        "description": "Documentación interactiva Swagger para la API Monitoreo"
+    },
+    "host": "localhost:9090",
+    "basePath": "/api",
+    "schemes": ["https"],
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "JWT con el prefijo **Bearer**. Ejemplo: `Bearer {token}`"
+        }
+    },
+    "security": [
+        {
+            "Bearer": []
+        }
+    ]
+})
 
 # Usamos una bandera global para asegurarnos de que los datos solo se carguen una vez
 data_loaded = False
@@ -49,8 +75,8 @@ if __name__ == "__main__":
     # Iniciar la carga de datos
     start_load_data()
     print("📡 Rutas activas en Flask:")
-    #print(app.url_map)
-
+    print(app.url_map)
+    
     # Ejecutar el servidor de Flask
     app.run(
         ssl_context=('certs/ssl.crt', 'certs/ssl.key'),  # Usar los certificados SSL generados
