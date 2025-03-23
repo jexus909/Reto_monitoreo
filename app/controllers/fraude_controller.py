@@ -6,7 +6,7 @@ from app.utils.security import enmascarar_tarjeta, enmascarar_cuenta, decode_if_
 from app.decorators.auth import require_auth
 
 class FraudeController(Resource):
-    @require_auth(roles=["fraude"])  # Solo permite acceso a rol 'fraude'
+    @require_auth(roles=["fraude"])  # Solo permite acceso al rol 'fraude'
     def get(self, user_name):
         print(f"📥 [Fraude] Ingreso al endpoint con usuario: {user_name}")
 
@@ -18,28 +18,11 @@ class FraudeController(Resource):
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-            query = """
-                SELECT
-                    u.user_name,
-                    pgp_sym_decrypt(u.geo_latitud::bytea, %s) AS geo_latitud,
-                    pgp_sym_decrypt(u.geo_longitud::bytea, %s) AS geo_longitud,
-                    pgp_sym_decrypt(u.ip::bytea, %s) AS ip,
-                    dp.cantidad_compras_realizadas,
-                    pgp_sym_decrypt(dp.credit_card_num::bytea, %s) AS credit_card_num,
-                    pgp_sym_decrypt(dp.cuenta_numero::bytea, %s) AS cuenta_numero
-                FROM usuarios u
-                JOIN datos_pago dp ON u.id = dp.usuario_id
-                WHERE u.user_name = %s
-            """
-
-            cursor.execute(query, (
-                encryption_key,
-                encryption_key,
-                encryption_key,
-                encryption_key,
-                encryption_key,
-                user_name
-            ))
+            # 🔑 Llamada a la función almacenada
+            cursor.execute(
+                "SELECT * FROM obtener_datos_fraude_por_username(%s, %s);", 
+                (encryption_key, user_name)
+            )
 
             result = cursor.fetchone()
             cursor.close()
@@ -51,6 +34,7 @@ class FraudeController(Resource):
 
             print("✅ Datos recuperados con éxito.")
 
+            #  imprimir resultados.
             return {
                 "user_name": result["user_name"],
                 "geo_latitud": decode_if_memoryview(result["geo_latitud"]),

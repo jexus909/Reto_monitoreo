@@ -15,18 +15,12 @@ class UsuarioController(Resource):
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-            query = """
-                SELECT
-                    user_name,
-                    codigo_zip,
-                    pgp_sym_decrypt(direccion::bytea, %s) AS direccion,
-                    color_favorito,
-                    pgp_sym_decrypt(ip::bytea, %s) AS ip,
-                    avatar
-                FROM usuarios
-                WHERE user_name = %s
-            """
-            cursor.execute(query, (encryption_key, encryption_key, user_name))
+            # 🔑 Llamada a la función almacenada en PostgreSQL
+            cursor.execute(
+                "SELECT * FROM obtener_usuario_por_username(%s, %s);",
+                (encryption_key, user_name)
+            )
+
             user = cursor.fetchone()
 
             cursor.close()
@@ -38,7 +32,7 @@ class UsuarioController(Resource):
             user['direccion'] = decode_if_memoryview(user['direccion'])
             user['ip'] = decode_if_memoryview(user['ip'])
 
-            return user, 200  # ✅ Devuelve un dict simple que Flask-RESTful puede serializar
+            return user, 200  # ✅ Resultado desencriptado y listo para retornar
 
         except Exception as e:
             return {"error": str(e)}, 500
