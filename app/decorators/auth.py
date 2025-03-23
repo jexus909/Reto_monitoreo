@@ -5,8 +5,10 @@ from flask import request
 import requests
 import os
 
-# Variables de entorno para Vault
-VAULT_ADDR = os.getenv("VAULT_ADDR")
+IS_LOCAL = os.getenv("RUN_ENV", "docker") == "local"
+
+# Variables de entorno para Vault (compatibles con local y Docker)
+VAULT_ADDR = os.getenv("VAULT_ADDR1" if IS_LOCAL else "VAULT_ADDR", "http://localhost:8200")
 VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
 VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
 VAULT_FIREBASE_PATH = "secret/data/firebase"

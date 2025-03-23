@@ -5,19 +5,21 @@ from dotenv import load_dotenv
 from app.models.db import get_db_connection
 from datetime import datetime
 
-# Variable global para evitar carga duplicada
-data_loaded = False
-
 # Cargar variables de entorno desde .env
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(dotenv_path=dotenv_path, override=True)
 
+# Detectar entorno de ejecución
+IS_LOCAL = os.getenv("RUN_ENV", "docker") == "local"
+VAULT_ADDR = os.getenv("VAULT_ADDR1" if IS_LOCAL else "VAULT_ADDR", "http://localhost:8200")
+VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
+VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
+
+# Variable global para evitar carga duplicada
+data_loaded = False
+
 def get_vault_token():
     """Obtener el token de Vault usando AppRole."""
-    VAULT_ADDR = os.getenv("VAULT_ADDR")
-    VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
-    VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
-
     headers = {"Content-Type": "application/json"}
     auth_url = f"{VAULT_ADDR}/v1/auth/approle/login"
     response = requests.post(auth_url, json={"role_id": VAULT_ROLE_ID, "secret_id": VAULT_SECRET_ID}, headers=headers)
@@ -29,15 +31,14 @@ def get_vault_token():
 
 def get_encryption_key(vault_token):
     """Obtener la clave de cifrado desde Vault."""
-    VAULT_ADDR = os.getenv("VAULT_ADDR")
     headers = {"X-Vault-Token": vault_token}
-    
     response = requests.get(f"{VAULT_ADDR}/v1/secret/data/postgres_key", headers=headers)
 
     if response.status_code == 200:
         return response.json()["data"]["data"]["value"]
     else:
         raise Exception(f"❌ Error obteniendo la clave de cifrado desde Vault: {response.text}")
+
 
 def fix_date_format(date_str):
     """Corrige el formato de fecha para PostgreSQL o asigna una fecha por defecto si es inválida."""

@@ -53,7 +53,7 @@ services:
       - "-c"
       - |
         pip install --no-cache-dir --upgrade pip &&
-        pip install --no-cache-dir requests python-dotenv &&
+        pip install --no-cache-dir requests python-dotenv psycopg2-binary &&
         python setup_vault.py
 
 volumes:

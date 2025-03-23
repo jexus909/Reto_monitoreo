@@ -4,6 +4,8 @@ from app.routes.api_routes import api_bp  # Importar rutas de la API
 from app.decorators.auth import cargar_credenciales_firebase  # Importamos la función desde auth.py
 import threading
 import time  # Importamos time para hacer la pausa
+from app.utils.env_utils import get_env_variable
+
 
 app = Flask(__name__)
 
