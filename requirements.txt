@@ -1,0 +1,7 @@
+flask
+flask-restful
+requests
+psycopg2
+python-dotenv
+flasgger
+firebase-admin

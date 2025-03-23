@@ -16,11 +16,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./postgresql.conf:/etc/postgresql/postgresql.conf  # ✅ cambio aquí claramente
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf  
     command:
       - "postgres"
       - "-c"
-      - "config_file=/etc/postgresql/postgresql.conf"      # ✅ ajusta claramente aquí también
+      - "config_file=/etc/postgresql/postgresql.conf"
 
   vault:
     image: hashicorp/vault:latest
@@ -52,6 +52,23 @@ services:
         pip install --no-cache-dir --upgrade pip &&
         pip install --no-cache-dir requests python-dotenv psycopg2-binary &&
         python setup_vault.py
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: monitoreo_app
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      RUN_ENV: docker
+    ports:
+      - "9090:9090"
+    command: ["python", "app.py"]
 
 volumes:
   postgres_data:

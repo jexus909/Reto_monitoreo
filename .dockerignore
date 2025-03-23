@@ -1,0 +1,36 @@
+# Entornos virtuales
+venv/
+ENV/
+env/
+
+# Archivos de configuración sensibles
+
+# Archivos compilados
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+
+# Logs y dumps
+logs/
+*.log
+
+# Archivos temporales
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# Archivos de IDEs/editores
+.vscode/
+.idea/
+*.iml
+
+# Caché de paquetes
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+
+# Certificados de desarrollo locales
+certs_pgsql
