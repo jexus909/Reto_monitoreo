@@ -6,23 +6,23 @@ from app.utils.security import enmascarar_tarjeta, enmascarar_cuenta, decode_if_
 from app.decorators.auth import require_auth
 import os
 from flasgger import swag_from
+from app.utils.logger import get_logger
+
+logger = get_logger("fraude")
 
 class FraudeController(Resource):
     @swag_from(os.path.join(os.path.dirname(__file__), '../../swagger_docs/fraude_controller.yml'))
-    #@swag_from('swagger_docs/fraude_controller.yml')
-    @require_auth(roles=["fraude"])  # Solo permite acceso al rol 'fraude'
+    @require_auth(roles=["fraude"])
     def get(self, user_name):
-        print(f"📥 [Fraude] Ingreso al endpoint con usuario: {user_name}")
+        logger.info(f"Solicitud de datos de fraude para: {user_name}")
 
         try:
-            # 🔐 Obtener clave para desencriptar campos sensibles
             vault_token = get_vault_token()
             encryption_key = get_encryption_key(vault_token)
 
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-            # 🔑 Llamada a la función almacenada
             cursor.execute(
                 "SELECT * FROM obtener_datos_fraude_por_username(%s, %s);", 
                 (encryption_key, user_name)
@@ -33,12 +33,11 @@ class FraudeController(Resource):
             conn.close()
 
             if not result:
-                print("⚠️ Usuario no encontrado o sin datos de pago.")
+                logger.warning(f"No se encontraron datos de fraude para: {user_name}")
                 return {"message": "Usuario no encontrado o sin datos de pago"}, 404
 
-            print("✅ Datos recuperados con éxito.")
+            logger.info(f"Datos de fraude obtenidos exitosamente para: {user_name}")
 
-            #  imprimir resultados.
             return {
                 "user_name": result["user_name"],
                 "geo_latitud": decode_if_memoryview(result["geo_latitud"]),
@@ -50,5 +49,5 @@ class FraudeController(Resource):
             }, 200
 
         except Exception as e:
-            print(f"❌ Error en el endpoint de fraude: {e}")
-            return {"error": str(e)}, 500
+            logger.error(f"Error al consultar datos de fraude para {user_name}: {e}")
+            return {"error": "Error interno del servidor"}, 500

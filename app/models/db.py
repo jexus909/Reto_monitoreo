@@ -2,11 +2,13 @@ import os
 import psycopg2
 import requests
 from dotenv import load_dotenv
+from app.utils.logger import get_logger
+
+logger = get_logger("db")
 
 load_dotenv()
-#  Detección del entorno
-IS_LOCAL = os.getenv("RUN_ENV", "docker") == "local"
 
+IS_LOCAL = os.getenv("RUN_ENV", "docker") == "local"
 VAULT_ADDR = os.getenv("VAULT_ADDR1" if IS_LOCAL else "VAULT_ADDR", "http://localhost:8200")
 VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
 VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
@@ -15,7 +17,7 @@ POSTGRES_PORT = "5432"
 POSTGRES_DB = os.getenv("POSTGRES_DB", "mi_base_datos")
 
 def get_vault_token():
-    """Autenticarse en Vault usando AppRole"""
+    """Autenticarse en Vault usando AppRole."""
     auth_url = f"{VAULT_ADDR}/v1/auth/approle/login"
     headers = {"Content-Type": "application/json"}
     payload = {"role_id": VAULT_ROLE_ID, "secret_id": VAULT_SECRET_ID}
@@ -24,10 +26,11 @@ def get_vault_token():
     if response.status_code == 200:
         return response.json()["auth"]["client_token"]
     else:
-        raise Exception(f"❌ Error autenticando en Vault: {response.text}")
+        logger.error(f"Error autenticando en Vault: {response.text}")
+        raise Exception("Falló autenticación en Vault")
 
 def get_jit_db_credentials(vault_token):
-    """Obtener usuario y contraseña JIT desde Vault"""
+    """Obtener credenciales JIT desde Vault para PostgreSQL."""
     headers = {"X-Vault-Token": vault_token}
     creds_url = f"{VAULT_ADDR}/v1/database/creds/app-role"
 
@@ -36,10 +39,11 @@ def get_jit_db_credentials(vault_token):
         data = response.json()["data"]
         return data["username"], data["password"]
     else:
-        raise Exception(f"❌ Error obteniendo credenciales JIT: {response.text}")
+        logger.error(f"Error obteniendo credenciales JIT: {response.text}")
+        raise Exception("Falló obtención de credenciales JIT")
 
 def get_db_connection():
-    """Obtener conexión segura a PostgreSQL usando credenciales JIT"""
+    """Retorna conexión segura a PostgreSQL usando credenciales JIT."""
     try:
         vault_token = get_vault_token()
         db_user, db_pass = get_jit_db_credentials(vault_token)
@@ -54,5 +58,5 @@ def get_db_connection():
         )
         return conn
     except Exception as e:
-        print(f"❌ Error en get_db_connection: {e}")
+        logger.error(f"Error en get_db_connection: {e}")
         raise

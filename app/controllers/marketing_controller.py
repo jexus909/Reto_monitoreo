@@ -6,24 +6,22 @@ from app.utils.security import decode_if_memoryview
 from app.decorators.auth import require_auth
 import os
 from flasgger import swag_from
-print("✅ marketing_controller.py cargado correctamente")
+from app.utils.logger import get_logger
 
+logger = get_logger("marketing")
 
 class MarketingController(Resource):
     @swag_from(os.path.join(os.path.dirname(__file__), '../../swagger_docs/marketing_controller.yml'))
-    #@swag_from('swagger_docs/marketing_controller.yml')
-    @require_auth(roles=["marketing"])  # Solo permite acceso al rol 'marketing'
+    @require_auth(roles=["marketing"])
     def get(self, user_name):
-
+        logger.info(f"Consulta de datos de marketing para: {user_name}")
         try:
-            # 🔐 Obtener clave para desencriptar datos del auto
             vault_token = get_vault_token()
             encryption_key = get_encryption_key(vault_token)
 
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-            # 🔑 Llamada a función almacenada en PostgreSQL
             cursor.execute(
                 "SELECT * FROM obtener_datos_marketing_por_username(%s, %s);",
                 (encryption_key, user_name)
@@ -34,9 +32,10 @@ class MarketingController(Resource):
             conn.close()
 
             if not result:
+                logger.warning(f"No se encontraron datos de marketing para: {user_name}")
                 return {"message": "Usuario no encontrado o sin datos de auto"}, 404
 
-            # ✨ Resultado desencriptado, decodificado y retornado al usuario final
+            logger.info(f"Datos de marketing entregados para: {user_name}")
             return {
                 "user_name": result["user_name"],
                 "color_favorito": result["color_favorito"],
@@ -49,4 +48,5 @@ class MarketingController(Resource):
             }, 200
 
         except Exception as e:
-            return {"error": str(e)}, 500
+            logger.error(f"Error en consulta de marketing para {user_name}: {e}")
+            return {"error": "Error interno del servidor"}, 500

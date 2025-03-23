@@ -1,18 +1,21 @@
 from flask import Flask
 from flasgger import Swagger
-from app.controllers.load_data import load_data  # Llamar al módulo que realiza la carga
-from app.routes.api_routes import api_bp  # Importar rutas de la API
-from app.decorators.auth import cargar_credenciales_firebase  # Importamos la función desde auth.py
+from app.controllers.load_data import load_data
+from app.routes.api_routes import api_bp
+from app.decorators.auth import cargar_credenciales_firebase
 import threading
-import time  # Importamos time para hacer la pausa
-from app.utils.env_utils import get_env_variable
+import time
+from app.utils.logger import get_logger
 
+# Logger principal para app.py
+logger = get_logger("main")
 
 app = Flask(__name__)
 
-# Registrar las rutas de la API
+# Registrar rutas de la API
 app.register_blueprint(api_bp, url_prefix='/api')
-# Configuración básica de Swagger
+
+# Configuración Swagger
 swagger = Swagger(app, template={
     "swagger": "2.0",
     "info": {
@@ -38,49 +41,44 @@ swagger = Swagger(app, template={
     ]
 })
 
-# Usamos una bandera global para asegurarnos de que los datos solo se carguen una vez
+# Bandera para evitar múltiples cargas de datos
 data_loaded = False
 
-# Función para cargar los datos en un hilo
 def load_data_in_background():
-    """
-    Cargar los datos en un hilo en segundo plano al inicio del servidor
-    """
     global data_loaded
     if not data_loaded:
-        print("Iniciando la carga de datos desde la API externa...")
-        load_data()  # Llamar a la función que realiza la carga de datos
-        data_loaded = True  # Marcar como cargado para evitar futuras cargas
-        print("Datos cargados con éxito.")
+        logger.info(" Iniciando la carga de datos desde API externa...")
+        try:
+            load_data()
+            data_loaded = True
+            logger.info(" Datos cargados con éxito.")
+        except Exception as e:
+            logger.error(f" Error durante la carga de datos: {e}")
     else:
-        print("Los datos ya han sido cargados previamente.")
+        logger.debug(" Los datos ya fueron cargados previamente.")
 
-# Ejecutar la carga de datos en un hilo en segundo plano al iniciar el servidor
 def start_load_data():
-    print("Arrancando el servidor Flask...")
+    logger.info(" Ejecutando hilo para carga de datos...")
     thread = threading.Thread(target=load_data_in_background)
     thread.start()
 
 if __name__ == "__main__":
-    # **Cargar las credenciales de Firebase** al iniciar la aplicación
     if cargar_credenciales_firebase():
-        print("✅ Firebase Admin SDK inicializado correctamente.")
+        logger.info(" Firebase Admin SDK inicializado correctamente.")
     else:
-        print("❌ No se pudo inicializar Firebase Admin SDK desde Vault.")
-    
-    # Pausar 30 segundos antes de iniciar la carga de datos
-    print("⏳ Pausando 5 segundos para verificar la carga de Firebase...")
-    time.sleep(5)  # Pausa de 30 segundos
+        logger.critical(" No se pudo inicializar Firebase Admin SDK desde Vault.")
 
-    # Iniciar la carga de datos
-    start_load_data()
-    print("📡 Rutas activas en Flask:")
-    print(app.url_map)
     
-    # Ejecutar el servidor de Flask
+    start_load_data()
+
+    logger.info("Rutas registradas:")
+    for rule in app.url_map.iter_rules():
+        logger.debug(f" {rule}")
+
+    logger.info("Servidor Flask ejecutándose en https://localhost:9090")
     app.run(
-        ssl_context=('certs/ssl.crt', 'certs/ssl.key'),  # Usar los certificados SSL generados
+        ssl_context=('certs/ssl.crt', 'certs/ssl.key'),
         debug=False,
-        host='0.0.0.0',  # Aceptar conexiones de cualquier IP
-        port=9090  # Puerto para HTTPS
+        host='0.0.0.0',
+        port=9090
     )

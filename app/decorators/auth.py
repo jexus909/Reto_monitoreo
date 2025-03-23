@@ -4,10 +4,11 @@ from functools import wraps
 from flask import request
 import requests
 import os
+from app.utils.logger import get_logger
+
+logger = get_logger("auth")
 
 IS_LOCAL = os.getenv("RUN_ENV", "docker") == "local"
-
-# Variables de entorno para Vault (compatibles con local y Docker)
 VAULT_ADDR = os.getenv("VAULT_ADDR1" if IS_LOCAL else "VAULT_ADDR", "http://localhost:8200")
 VAULT_ROLE_ID = os.getenv("VAULT_ROLE_ID")
 VAULT_SECRET_ID = os.getenv("VAULT_SECRET_ID")
@@ -26,17 +27,18 @@ def obtener_vault_token():
     response = requests.post(vault_url, json=data)
     if response.status_code == 200:
         client_token = response.json()["auth"]["client_token"]
-        print(f"✅ Token de Vault obtenido con éxito: {client_token[:8]}******")
+        logger.info("Token de Vault obtenido exitosamente.")
         return client_token
     else:
-        raise Exception(f"❌ Error autenticando con Vault: {response.text}")
+        logger.error(f"Error autenticando con Vault: {response.text}")
+        raise Exception("Error autenticando con Vault")
 
 def cargar_credenciales_firebase():
     """
     Recupera las credenciales de Firebase desde Vault y las inicializa en Firebase Admin SDK.
     """
     if firebase_admin._apps:
-        print("⚠️ Firebase ya estaba inicializado. Se omite reinicialización.")
+        logger.warning("Firebase ya había sido inicializado. Se omite reinicialización.")
         return True
 
     vault_token = obtener_vault_token()
@@ -44,25 +46,24 @@ def cargar_credenciales_firebase():
         "X-Vault-Token": vault_token
     }
 
-    print("🔥 Intentando obtener credenciales de Firebase desde Vault...")
+    logger.info("Solicitando credenciales de Firebase desde Vault...")
     response = requests.get(f"{VAULT_ADDR}/v1/{VAULT_FIREBASE_PATH}", headers=headers)
 
     if response.status_code == 200:
-        print("🔥 Credenciales de Firebase recuperadas con éxito desde Vault.")
         firebase_service_account = response.json()['data']['data']
         cred = credentials.Certificate(firebase_service_account)
         firebase_admin.initialize_app(cred)
-        print("✅ Firebase Admin SDK inicializado correctamente.")
+        logger.info("Firebase Admin SDK inicializado correctamente.")
         return True
     else:
-        print(f"❌ Error al obtener las credenciales de Firebase desde Vault: {response.status_code}")
+        logger.error(f"Error al obtener las credenciales de Firebase: {response.status_code}")
         return False
 
-# Cargar las credenciales de Firebase una vez al iniciar
+# Cargar credenciales automáticamente al importar si aún no está hecho
 if cargar_credenciales_firebase():
-    print("✅ Firebase Admin SDK inicializado correctamente.")
+    logger.info("Firebase Admin SDK listo.")
 else:
-    print("❌ No se pudo inicializar Firebase Admin SDK desde Vault.")
+    logger.critical("No se pudo inicializar Firebase desde Vault.")
 
 def require_auth(roles=None):
     """
@@ -71,43 +72,38 @@ def require_auth(roles=None):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            print("🛡️ Ejecutando decorador require_auth...")
-
             token = request.headers.get("Authorization")
             if not token:
-                print("🚫 No se proporcionó token")
+                logger.warning("Token no proporcionado en el encabezado.")
                 return {"message": "Token no proporcionado"}, 401
 
             token = token.replace("Bearer ", "")
             try:
-                print(f"🔥 Verificando token JWT: {token[:20]}...")  # Truncado para no exponerlo completo
+                logger.info("Verificando token JWT...")
                 decoded_token = auth.verify_id_token(token)
-
-                print("🧾 Claims del token:", decoded_token)
 
                 rol = decoded_token.get("rol")
                 if not rol:
-                    print("⚠️ Rol no presente en el token.")
+                    logger.warning("Rol no especificado en el token.")
                     return {"message": "Acceso denegado. Rol no especificado."}, 403
 
-                # Normalizar el rol y los roles permitidos
                 rol = rol.strip().lower()
                 normalized_roles = [r.strip().lower() for r in roles]
 
-                print(f"🔐 Rol detectado: [{rol}]")
-                print(f"✅ Roles permitidos: {normalized_roles}")
+                logger.info(f"Rol detectado: {rol}")
+                logger.info(f"Roles autorizados: {normalized_roles}")
 
                 if rol not in normalized_roles:
-                    print("🚫 Acceso denegado por rol no autorizado.")
+                    logger.warning(f"Acceso denegado: rol '{rol}' no autorizado.")
                     return {"message": "Rol no autorizado"}, 403
 
-                print("✅ Acceso autorizado. Ejecutando función protegida...")
+                logger.info("Acceso autorizado al recurso protegido.")
 
             except Exception as e:
-                print(f"❌ Error al verificar el token: {e}")
+                logger.error(f"Error al verificar el token: {e}")
                 return {
                     "message": "Token inválido o error en la verificación",
-                    "error": str(e)
+                    "error": "Autenticación fallida"
                 }, 401
 
             return func(*args, **kwargs)

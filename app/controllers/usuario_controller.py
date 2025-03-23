@@ -6,11 +6,15 @@ from app.utils.security import decode_if_memoryview
 from app.decorators.auth import require_auth
 import os
 from flasgger import swag_from
+from app.utils.logger import get_logger
+
+logger = get_logger("usuario")
 
 class UsuarioController(Resource):
     @swag_from(os.path.join(os.path.dirname(__file__), '../../swagger_docs/usuario_get.yml'))
     @require_auth(roles=["soporte"])
     def get(self, user_name):
+        logger.info(f"Consulta de usuario iniciada: {user_name}")
         try:
             vault_token = get_vault_token()
             encryption_key = get_encryption_key(vault_token)
@@ -18,7 +22,6 @@ class UsuarioController(Resource):
             conn = get_db_connection()
             cursor = conn.cursor(cursor_factory=RealDictCursor)
 
-            # 🔑 Llamada a la función almacenada en PostgreSQL
             cursor.execute(
                 "SELECT * FROM obtener_usuario_por_username(%s, %s);",
                 (encryption_key, user_name)
@@ -30,12 +33,15 @@ class UsuarioController(Resource):
             conn.close()
 
             if not user:
+                logger.warning(f"Usuario no encontrado: {user_name}")
                 return {"message": "Usuario no encontrado"}, 404
 
             user['direccion'] = decode_if_memoryview(user['direccion'])
             user['ip'] = decode_if_memoryview(user['ip'])
 
-            return user, 200  # ✅ Resultado desencriptado y listo para retornar
+            logger.info(f"Datos obtenidos correctamente para usuario: {user_name}")
+            return user, 200
 
         except Exception as e:
-            return {"error": str(e)}, 500
+            logger.error(f"Error consultando usuario {user_name}: {e}")
+            return {"error": "Error interno del servidor"}, 500
