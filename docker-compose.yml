@@ -16,14 +16,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf  # ✅ cambio aquí claramente
     command:
       - "postgres"
       - "-c"
-      - "ssl=on"
-      - "-c"
-      - "ssl_cert_file=/var/lib/postgresql/server.crt"
-      - "-c"
-      - "ssl_key_file=/var/lib/postgresql/server.key"
+      - "config_file=/etc/postgresql/postgresql.conf"      # ✅ ajusta claramente aquí también
 
   vault:
     image: hashicorp/vault:latest
