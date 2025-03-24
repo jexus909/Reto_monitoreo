@@ -31,6 +31,6 @@ pip-wheel-metadata/
 *.egg-info/
 dist/
 build/
+#fin
 
-# Certificados de desarrollo locales
-certs_pgsql
+
